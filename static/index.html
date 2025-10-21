@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản lý sản phẩm</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    form { margin-top: 20px; }
+    input, button { margin: 5px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Quản lý sản phẩm</h1>
+
+  <h2>Danh sách sản phẩm</h2>
+  <table id="product-table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Tên</th><th>Mô tả</th><th>Giá</th><th>Số lượng</th><th>Hành động</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <h2>Thêm sản phẩm</h2>
+  <form id="create-form">
+    <input type="text" id="name" placeholder="Tên" required>
+    <input type="text" id="description" placeholder="Mô tả">
+    <input type="number" step="0.01" id="price" placeholder="Giá" required>
+    <input type="number" id="quantity" placeholder="Số lượng" required>
+    <button type="submit">Thêm</button>
+  </form>
+
+  <script>
+    const API_URL = "http://localhost:5001/products";
+    const TOKEN = "<dán JWT token hợp lệ vào đây>";
+
+    async function loadProducts() {
+      const res = await fetch(API_URL, {
+        headers: { "Authorization": "Bearer " + TOKEN }
+      });
+      const data = await res.json();
+      const tbody = document.querySelector("#product-table tbody");
+      tbody.innerHTML = "";
+      data.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.id}</td>
+          <td><input value="${p.name}" data-id="${p.id}" data-field="name"></td>
+          <td><input value="${p.description || ""}" data-id="${p.id}" data-field="description"></td>
+          <td><input type="number" step="0.01" value="${p.price}" data-id="${p.id}" data-field="price"></td>
+          <td><input type="number" value="${p.quantity}" data-id="${p.id}" data-field="quantity"></td>
+          <td>
+            <button onclick="updateProduct(${p.id})">Cập nhật</button>
+            <button onclick="deleteProduct(${p.id})">Xóa</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function createProduct(e) {
+      e.preventDefault();
+      const body = {
+        name: document.getElementById("name").value,
+        description: document.getElementById("description").value,
+        price: document.getElementById("price").value,
+        quantity: document.getElementById("quantity").value
+      };
+      await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + TOKEN
+        },
+        body: JSON.stringify(body)
+      });
+      e.target.reset();
+      loadProducts();
+    }
+
+    async function updateProduct(id) {
+      const inputs = document.querySelectorAll(`[data-id="${id}"]`);
+      const body = {};
+      inputs.forEach(input => body[input.dataset.field] = input.value);
+      await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + TOKEN
+        },
+        body: JSON.stringify(body)
+      });
+      loadProducts();
+    }
+
+    async function deleteProduct(id) {
+      await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: { "Authorization": "Bearer " + TOKEN }
+      });
+      loadProducts();
+    }
+
+    document.getElementById("create-form").addEventListener("submit", createProduct);
+
+    loadProducts();
+  </script>
+</body>
+</html>
