@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo Sản phẩm - Dịch vụ Báo cáo{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <div class="page-header">
+        <h2 class="page-title">Báo cáo Sản phẩm</h2>
+        <button class="btn btn-primary" onclick="showCreateProductReportModal()">+ Tạo báo cáo mới</button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Order Report ID</th>
+                    <th>Product ID</th>
+                    <th>Số lượng bán</th>
+                    <th>Doanh thu</th>
+                    <th>Chi phí</th>
+                    <th>Lợi nhuận</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="product-reports-table">
+                <tr>
+                    <td colspan="9" class="text-center">Đang tải...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Product Report Modal -->
+<div id="createProductModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCreateProductModal()">&times;</span>
+        <h2>Tạo báo cáo sản phẩm mới</h2>
+        <form id="createProductForm" onsubmit="handleCreateProductReport(event)">
+            <div class="form-group">
+                <label for="order_report_id">Order Report ID *:</label>
+                <input type="number" id="order_report_id" name="order_report_id" required>
+            </div>
+            <div class="form-group">
+                <label for="product_id">Product ID *:</label>
+                <input type="number" id="product_id" name="product_id" required>
+            </div>
+            <div class="form-group">
+                <label for="total_sold">Số lượng bán:</label>
+                <input type="number" id="total_sold" name="total_sold" value="0" min="0">
+            </div>
+            <div class="form-group">
+                <label for="revenue">Doanh thu (₫):</label>
+                <input type="number" id="revenue" name="revenue" step="0.01" value="0.00">
+            </div>
+            <div class="form-group">
+                <label for="cost">Chi phí (₫):</label>
+                <input type="number" id="cost" name="cost" step="0.01" value="0.00">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Tạo báo cáo</button>
+        </form>
+        <div id="createProductError" class="error-message" style="display: none;"></div>
+    </div>
+</div>
+
+<!-- View Product Report Detail Modal -->
+<div id="viewProductModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeViewProductModal()">&times;</span>
+        <h2>Chi tiết báo cáo sản phẩm</h2>
+        <div id="product-detail-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (getToken()) {
+            loadProductReports();
+        } else {
+            document.getElementById('product-reports-table').innerHTML = 
+                '<tr><td colspan="9" class="text-center">Vui lòng đăng nhập để xem báo cáo</td></tr>';
+        }
+    });
+
+    function loadProductReports() {
+        fetch('/reports/products', {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('product-reports-table');
+            if (data.success && data.data && data.data.length > 0) {
+                tbody.innerHTML = data.data.map(product => `
+                    <tr>
+                        <td>${product.id}</td>
+                        <td>${product.order_report_id}</td>
+                        <td>${product.product_id}</td>
+                        <td>${product.total_sold}</td>
+                        <td>${formatCurrency(product.revenue)}</td>
+                        <td>${formatCurrency(product.cost)}</td>
+                        <td class="${product.profit >= 0 ? 'positive' : 'negative'}">
+                            ${formatCurrency(product.profit)}
+                        </td>
+                        <td>${formatDate(product.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewProductReport(${product.id})">Xem</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteProductReport(${product.id})">Xóa</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">Chưa có báo cáo nào</td></tr>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('product-reports-table').innerHTML = 
+                '<tr><td colspan="9" class="text-center text-error">Lỗi khi tải dữ liệu</td></tr>';
+            console.error('Error:', error);
+        });
+    }
+
+    function showCreateProductReportModal() {
+        if (!getToken()) {
+            alert('Vui lòng đăng nhập trước');
+            showLogin();
+            return;
+        }
+        document.getElementById('createProductModal').style.display = 'block';
+    }
+
+    function closeCreateProductModal() {
+        document.getElementById('createProductModal').style.display = 'none';
+        document.getElementById('createProductForm').reset();
+        document.getElementById('createProductError').style.display = 'none';
+    }
+
+    function handleCreateProductReport(event) {
+        event.preventDefault();
+        const formData = {
+            order_report_id: parseInt(document.getElementById('order_report_id').value),
+            product_id: parseInt(document.getElementById('product_id').value),
+            total_sold: parseInt(document.getElementById('total_sold').value) || 0,
+            revenue: parseFloat(document.getElementById('revenue').value) || 0.00,
+            cost: parseFloat(document.getElementById('cost').value) || 0.00
+        };
+
+        fetch('/reports/products', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeCreateProductModal();
+                loadProductReports();
+                showSuccess('Tạo báo cáo sản phẩm thành công!');
+            } else {
+                document.getElementById('createProductError').textContent = data.message || 'Có lỗi xảy ra';
+                document.getElementById('createProductError').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            document.getElementById('createProductError').textContent = 'Lỗi kết nối: ' + error.message;
+            document.getElementById('createProductError').style.display = 'block';
+        });
+    }
+
+    function viewProductReport(id) {
+        fetch(`/reports/products/${id}`, {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const product = data.data;
+                const html = `
+                    <div class="detail-section">
+                        <p><strong>ID:</strong> ${product.id}</p>
+                        <p><strong>Order Report ID:</strong> ${product.order_report_id}</p>
+                        <p><strong>Product ID:</strong> ${product.product_id}</p>
+                        <p><strong>Số lượng bán:</strong> ${product.total_sold}</p>
+                        <p><strong>Doanh thu:</strong> ${formatCurrency(product.revenue)}</p>
+                        <p><strong>Chi phí:</strong> ${formatCurrency(product.cost)}</p>
+                        <p><strong>Lợi nhuận:</strong> <span class="${product.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(product.profit)}</span></p>
+                        <p><strong>Ngày tạo:</strong> ${formatDate(product.created_at)}</p>
+                        <p><strong>Cập nhật:</strong> ${formatDate(product.updated_at)}</p>
+                    </div>
+                `;
+                document.getElementById('product-detail-content').innerHTML = html;
+                document.getElementById('viewProductModal').style.display = 'block';
+            } else {
+                alert('Không tìm thấy báo cáo');
+            }
+        })
+        .catch(error => {
+            alert('Lỗi khi tải chi tiết: ' + error.message);
+        });
+    }
+
+    function closeViewProductModal() {
+        document.getElementById('viewProductModal').style.display = 'none';
+    }
+
+    function deleteProductReport(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa báo cáo này?')) return;
+
+        fetch(`/reports/products/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadProductReports();
+                showSuccess('Xóa báo cáo thành công!');
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể xóa báo cáo'));
+            }
+        })
+        .catch(error => {
+            alert('Lỗi kết nối: ' + error.message);
+        });
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const modals = ['createProductModal', 'viewProductModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}
+

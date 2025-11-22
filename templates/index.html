@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Trang chủ - Dịch vụ Báo cáo{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h2 class="page-title">Dashboard Báo cáo</h2>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-info">
+                <h3 id="total-orders">0</h3>
+                <p>Tổng đơn hàng</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🛍️</div>
+            <div class="stat-info">
+                <h3 id="total-products">0</h3>
+                <p>Tổng sản phẩm</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+                <h3 id="total-revenue">0 ₫</h3>
+                <p>Tổng doanh thu</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💵</div>
+            <div class="stat-info">
+                <h3 id="total-profit">0 ₫</h3>
+                <p>Tổng lợi nhuận</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-actions">
+        <a href="{{ url_for('order_reports_page') }}" class="btn btn-primary btn-large">
+            📦 Quản lý Báo cáo Đơn hàng
+        </a>
+        <a href="{{ url_for('product_reports_page') }}" class="btn btn-primary btn-large">
+            🛍️ Quản lý Báo cáo Sản phẩm
+        </a>
+    </div>
+
+    <div class="recent-reports">
+        <h3>Báo cáo gần đây</h3>
+        <div id="recent-reports-content" class="reports-list">
+            <p class="text-muted">Vui lòng đăng nhập để xem báo cáo</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load dashboard stats when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        if (getToken()) {
+            loadDashboardStats();
+        }
+    });
+
+    function loadDashboardStats() {
+        Promise.all([
+            fetch('/reports/orders', {
+                headers: getAuthHeaders()
+            }),
+            fetch('/reports/products', {
+                headers: getAuthHeaders()
+            })
+        ]).then(responses => {
+            return Promise.all(responses.map(r => r.json()));
+        }).then(([ordersData, productsData]) => {
+            if (ordersData.success) {
+                const orders = ordersData.data || [];
+                document.getElementById('total-orders').textContent = orders.length;
+                
+                const totalRevenue = orders.reduce((sum, order) => sum + (order.total_revenue || 0), 0);
+                const totalProfit = orders.reduce((sum, order) => sum + (order.total_profit || 0), 0);
+                
+                document.getElementById('total-revenue').textContent = formatCurrency(totalRevenue);
+                document.getElementById('total-profit').textContent = formatCurrency(totalProfit);
+            }
+            
+            if (productsData.success) {
+                const products = productsData.data || [];
+                document.getElementById('total-products').textContent = products.length;
+            }
+            
+            loadRecentReports();
+        }).catch(error => {
+            console.error('Error loading dashboard:', error);
+        });
+    }
+
+    function loadRecentReports() {
+        fetch('/reports/orders', {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.length > 0) {
+                const recent = data.data.slice(-5).reverse();
+                const html = recent.map(order => `
+                    <div class="report-item">
+                        <div class="report-info">
+                            <strong>Đơn hàng #${order.order_id}</strong>
+                            <span class="text-muted">Doanh thu: ${formatCurrency(order.total_revenue)}</span>
+                        </div>
+                        <div class="report-profit ${order.total_profit >= 0 ? 'positive' : 'negative'}">
+                            ${formatCurrency(order.total_profit)}
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('recent-reports-content').innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent reports:', error);
+        });
+    }
+</script>
+{% endblock %}
+

@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Báo cáo Đơn hàng - Dịch vụ Báo cáo{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <div class="page-header">
+        <h2 class="page-title">Báo cáo Đơn hàng</h2>
+        <button class="btn btn-primary" onclick="showCreateOrderReportModal()">+ Tạo báo cáo mới</button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Order ID</th>
+                    <th>Doanh thu</th>
+                    <th>Chi phí</th>
+                    <th>Lợi nhuận</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody id="order-reports-table">
+                <tr>
+                    <td colspan="7" class="text-center">Đang tải...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Create Order Report Modal -->
+<div id="createOrderModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCreateOrderModal()">&times;</span>
+        <h2>Tạo báo cáo đơn hàng mới</h2>
+        <form id="createOrderForm" onsubmit="handleCreateOrderReport(event)">
+            <div class="form-group">
+                <label for="order_id">Order ID *:</label>
+                <input type="number" id="order_id" name="order_id" required>
+            </div>
+            <div class="form-group">
+                <label for="total_revenue">Tổng doanh thu (₫):</label>
+                <input type="number" id="total_revenue" name="total_revenue" step="0.01" value="0.00">
+            </div>
+            <div class="form-group">
+                <label for="total_cost">Tổng chi phí (₫):</label>
+                <input type="number" id="total_cost" name="total_cost" step="0.01" value="0.00">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Tạo báo cáo</button>
+        </form>
+        <div id="createOrderError" class="error-message" style="display: none;"></div>
+    </div>
+</div>
+
+<!-- View Order Report Detail Modal -->
+<div id="viewOrderModal" class="modal">
+    <div class="modal-content modal-large">
+        <span class="close" onclick="closeViewOrderModal()">&times;</span>
+        <h2>Chi tiết báo cáo đơn hàng</h2>
+        <div id="order-detail-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (getToken()) {
+            loadOrderReports();
+        } else {
+            document.getElementById('order-reports-table').innerHTML = 
+                '<tr><td colspan="7" class="text-center">Vui lòng đăng nhập để xem báo cáo</td></tr>';
+        }
+    });
+
+    function loadOrderReports() {
+        fetch('/reports/orders', {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('order-reports-table');
+            if (data.success && data.data && data.data.length > 0) {
+                tbody.innerHTML = data.data.map(order => `
+                    <tr>
+                        <td>${order.id}</td>
+                        <td>${order.order_id}</td>
+                        <td>${formatCurrency(order.total_revenue)}</td>
+                        <td>${formatCurrency(order.total_cost)}</td>
+                        <td class="${order.total_profit >= 0 ? 'positive' : 'negative'}">
+                            ${formatCurrency(order.total_profit)}
+                        </td>
+                        <td>${formatDate(order.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewOrderReport(${order.id})">Xem</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteOrderReport(${order.id})">Xóa</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">Chưa có báo cáo nào</td></tr>';
+            }
+        })
+        .catch(error => {
+            document.getElementById('order-reports-table').innerHTML = 
+                '<tr><td colspan="7" class="text-center text-error">Lỗi khi tải dữ liệu</td></tr>';
+            console.error('Error:', error);
+        });
+    }
+
+    function showCreateOrderReportModal() {
+        if (!getToken()) {
+            alert('Vui lòng đăng nhập trước');
+            showLogin();
+            return;
+        }
+        document.getElementById('createOrderModal').style.display = 'block';
+    }
+
+    function closeCreateOrderModal() {
+        document.getElementById('createOrderModal').style.display = 'none';
+        document.getElementById('createOrderForm').reset();
+        document.getElementById('createOrderError').style.display = 'none';
+    }
+
+    function handleCreateOrderReport(event) {
+        event.preventDefault();
+        const formData = {
+            order_id: parseInt(document.getElementById('order_id').value),
+            total_revenue: parseFloat(document.getElementById('total_revenue').value) || 0.00,
+            total_cost: parseFloat(document.getElementById('total_cost').value) || 0.00
+        };
+
+        fetch('/reports/orders', {
+            method: 'POST',
+            headers: {
+                ...getAuthHeaders(),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeCreateOrderModal();
+                loadOrderReports();
+                showSuccess('Tạo báo cáo đơn hàng thành công!');
+            } else {
+                document.getElementById('createOrderError').textContent = data.message || 'Có lỗi xảy ra';
+                document.getElementById('createOrderError').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            document.getElementById('createOrderError').textContent = 'Lỗi kết nối: ' + error.message;
+            document.getElementById('createOrderError').style.display = 'block';
+        });
+    }
+
+    function viewOrderReport(id) {
+        fetch(`/reports/orders/${id}`, {
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const order = data.data;
+                const html = `
+                    <div class="detail-section">
+                        <h3>Thông tin đơn hàng</h3>
+                        <p><strong>ID:</strong> ${order.id}</p>
+                        <p><strong>Order ID:</strong> ${order.order_id}</p>
+                        <p><strong>Tổng doanh thu:</strong> ${formatCurrency(order.total_revenue)}</p>
+                        <p><strong>Tổng chi phí:</strong> ${formatCurrency(order.total_cost)}</p>
+                        <p><strong>Lợi nhuận:</strong> <span class="${order.total_profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(order.total_profit)}</span></p>
+                        <p><strong>Ngày tạo:</strong> ${formatDate(order.created_at)}</p>
+                    </div>
+                    ${order.product_reports && order.product_reports.length > 0 ? `
+                        <div class="detail-section">
+                            <h3>Sản phẩm trong đơn hàng (${order.product_reports.length})</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product ID</th>
+                                        <th>Số lượng</th>
+                                        <th>Doanh thu</th>
+                                        <th>Chi phí</th>
+                                        <th>Lợi nhuận</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${order.product_reports.map(pr => `
+                                        <tr>
+                                            <td>${pr.product_id}</td>
+                                            <td>${pr.total_sold}</td>
+                                            <td>${formatCurrency(pr.revenue)}</td>
+                                            <td>${formatCurrency(pr.cost)}</td>
+                                            <td class="${pr.profit >= 0 ? 'positive' : 'negative'}">${formatCurrency(pr.profit)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<p class="text-muted">Chưa có sản phẩm nào trong đơn hàng này</p>'}
+                `;
+                document.getElementById('order-detail-content').innerHTML = html;
+                document.getElementById('viewOrderModal').style.display = 'block';
+            } else {
+                alert('Không tìm thấy báo cáo');
+            }
+        })
+        .catch(error => {
+            alert('Lỗi khi tải chi tiết: ' + error.message);
+        });
+    }
+
+    function closeViewOrderModal() {
+        document.getElementById('viewOrderModal').style.display = 'none';
+    }
+
+    function deleteOrderReport(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa báo cáo này?')) return;
+
+        fetch(`/reports/orders/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadOrderReports();
+                showSuccess('Xóa báo cáo thành công!');
+            } else {
+                alert('Lỗi: ' + (data.message || 'Không thể xóa báo cáo'));
+            }
+        })
+        .catch(error => {
+            alert('Lỗi kết nối: ' + error.message);
+        });
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const modals = ['createOrderModal', 'viewOrderModal'];
+        modals.forEach(modalId => {
+            const modal = document.getElementById(modalId);
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}
+
