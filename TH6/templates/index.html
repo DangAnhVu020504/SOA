@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Bán Hàng - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">🛍️ Hệ Thống Bán Hàng</div>
+            <ul class="nav-links">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/checkout">Mua Hàng</a></li>
+                <li><a href="/reports">Báo Cáo</a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <section class="hero">
+                <h1>Chào Mừng Bạn</h1>
+                <p>Hệ thống quản lý bán hàng trực tuyến tích hợp</p>
+            </section>
+
+            <section class="dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Danh Sách Sản Phẩm</h3>
+                        <button onclick="loadProducts()" class="btn btn-primary">Xem Sản Phẩm</button>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Đơn Hàng</h3>
+                        <button onclick="loadOrders()" class="btn btn-primary">Xem Đơn Hàng</button>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Báo Cáo</h3>
+                        <button onclick="loadReports()" class="btn btn-primary">Xem Báo Cáo</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Products Section -->
+            <section id="products-section" class="section hidden">
+                <h2>Danh Sách Sản Phẩm</h2>
+                <div id="products-list" class="products-grid">
+                    <p class="loading">Đang tải dữ liệu...</p>
+                </div>
+            </section>
+
+            <!-- Orders Section -->
+            <section id="orders-section" class="section hidden">
+                <h2>Danh Sách Đơn Hàng</h2>
+                <div id="orders-list" class="orders-table">
+                    <p class="loading">Đang tải dữ liệu...</p>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section id="reports-section" class="section hidden">
+                <h2>Báo Cáo</h2>
+                <div class="report-tabs">
+                    <button class="tab-btn active" onclick="showOrderReports()">Báo Cáo Đơn Hàng</button>
+                    <button class="tab-btn" onclick="showProductReports()">Báo Cáo Sản Phẩm</button>
+                </div>
+                <div id="order-reports" class="report-content">
+                    <p class="loading">Đang tải dữ liệu...</p>
+                </div>
+                <div id="product-reports" class="report-content hidden">
+                    <p class="loading">Đang tải dữ liệu...</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

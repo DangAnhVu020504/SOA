@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh Toán - Hệ Thống Bán Hàng</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">🛍️ Hệ Thống Bán Hàng</div>
+            <ul class="nav-links">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/checkout">Mua Hàng</a></li>
+                <li><a href="/reports">Báo Cáo</a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <section class="checkout-container">
+                <h1>🛒 Quy Trình Mua Hàng</h1>
+
+                <!-- Step 1: Select Products -->
+                <div class="checkout-step">
+                    <h2>Bước 1: Chọn Sản Phẩm</h2>
+                    <div class="products-list" id="products-list">
+                        <p class="loading">Đang tải danh sách sản phẩm...</p>
+                    </div>
+                </div>
+
+                <!-- Step 2: Review Cart -->
+                <div class="checkout-step">
+                    <h2>Bước 2: Giỏ Hàng</h2>
+                    <div class="cart-items" id="cart-items">
+                        <p class="empty-message">Giỏ hàng trống</p>
+                    </div>
+                    <div class="cart-summary">
+                        <div class="summary-row">
+                            <span>Tổng tiền:</span>
+                            <span id="total-amount">0 VNĐ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Customer Info -->
+                <div class="checkout-step">
+                    <h2>Bước 3: Thông Tin Khách Hàng</h2>
+                    <form id="customer-form">
+                        <div class="form-group">
+                            <label>Tên Khách Hàng:</label>
+                            <input type="text" id="customer-name" required placeholder="Nhập tên khách hàng">
+                        </div>
+                        <div class="form-group">
+                            <label>Email:</label>
+                            <input type="email" id="customer-email" required placeholder="Nhập email">
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Step 4: Checkout -->
+                <div class="checkout-step">
+                    <h2>Bước 4: Thanh Toán</h2>
+                    <button id="checkout-btn" class="btn btn-success btn-lg" onclick="submitOrder()">
+                        Đặt Hàng
+                    </button>
+                    <button class="btn btn-secondary btn-lg" onclick="clearCart()">
+                        Xóa Giỏ
+                    </button>
+                </div>
+
+                <!-- Order Result -->
+                <div id="order-result" class="section hidden">
+                    <h2>Kết Quả Đặt Hàng</h2>
+                    <div id="result-content" class="result-content"></div>
+                    <button class="btn btn-primary" onclick="resetCheckout()">Tiếp Tục Mua Hàng</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Cáo - Hệ Thống Bán Hàng</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <nav class="navbar">
+            <div class="logo">🛍️ Hệ Thống Bán Hàng</div>
+            <ul class="nav-links">
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/checkout">Mua Hàng</a></li>
+                <li><a href="/reports">Báo Cáo</a></li>
+            </ul>
+        </nav>
+
+        <div class="main-content">
+            <section class="reports-container">
+                <h1>📊 Báo Cáo Bán Hàng</h1>
+
+                <!-- Report Tabs -->
+                <div class="report-tabs">
+                    <button class="tab-btn active" onclick="switchTab('order-reports-tab')">
+                        Báo Cáo Đơn Hàng
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('product-reports-tab')">
+                        Báo Cáo Sản Phẩm
+                    </button>
+                </div>
+
+                <!-- Order Reports Tab -->
+                <div id="order-reports-tab" class="tab-content active">
+                    <h2>Báo Cáo Đơn Hàng</h2>
+                    <div class="controls">
+                        <button class="btn btn-primary" onclick="loadOrderReports()">Làm Mới</button>
+                    </div>
+                    <div id="order-reports-list" class="reports-list">
+                        <p class="loading">Đang tải báo cáo...</p>
+                    </div>
+                </div>
+
+                <!-- Product Reports Tab -->
+                <div id="product-reports-tab" class="tab-content hidden">
+                    <h2>Báo Cáo Sản Phẩm</h2>
+                    <div class="controls">
+                        <button class="btn btn-primary" onclick="loadProductReports()">Làm Mới</button>
+                    </div>
+                    <div id="product-reports-list" class="reports-list">
+                        <p class="loading">Đang tải báo cáo...</p>
+                    </div>
+                </div>
+
+                <!-- Order Details Modal -->
+                <div id="order-detail-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeOrderDetailModal()">&times;</span>
+                        <h2>Chi Tiết Báo Cáo Đơn Hàng</h2>
+                        <div id="order-detail-content"></div>
+                    </div>
+                </div>
+
+                <!-- Product Details Modal -->
+                <div id="product-detail-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <span class="close-btn" onclick="closeProductDetailModal()">&times;</span>
+                        <h2>Chi Tiết Báo Cáo Sản Phẩm</h2>
+                        <div id="product-detail-content"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+</body>
+</html>
